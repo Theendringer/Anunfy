@@ -1,12 +1,18 @@
 const express = require('express');
 const axios = require('axios');
 require('dotenv').config();
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
-const redirectUri = process.env.REDIRECT_URI;
+
+// A URL de redirecionamento para o Mercado Livre
+const redirectUri = 'https://anunfy.vercel.app/callback';
+
+// Habilitar CORS para todas as origens
+app.use(cors());
 
 // Rota inicial
 app.get('/', (req, res) => {
@@ -15,7 +21,7 @@ app.get('/', (req, res) => {
 
 // Rota de autenticação - redireciona para o Mercado Livre
 app.get('/auth', (req, res) => {
-    const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}`;
+    const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
     res.redirect(authUrl);
 });
 
@@ -37,6 +43,9 @@ app.get('/callback', async (req, res) => {
                 code,
                 redirect_uri: redirectUri,
             },
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
         });
 
         const { access_token, refresh_token } = tokenResponse.data;
@@ -47,11 +56,12 @@ app.get('/callback', async (req, res) => {
             refresh_token,
         });
     } catch (error) {
-        console.error('Erro ao obter o token de acesso:', error.response.data);
+        console.error('Erro ao obter o token de acesso:', error.response ? error.response.data : error.message);
         res.status(500).send('Erro ao obter o token de acesso.');
     }
 });
 
+// Iniciar o servidor
 app.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
